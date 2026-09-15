@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campustrade.mapper.ChatMessageMapper">
+
+    <!-- 获取用户的会话列表 -->
+    <select id="selectConversations" resultType="com.campustrade.vo.ConversationVO">
+        SELECT
+            CASE WHEN cm.sender_id = #{userId} THEN cm.receiver_id ELSE cm.sender_id END AS otherUserId,
+            u.nickname AS otherUserName,
+            u.avatar AS otherUserAvatar,
+            cm.goods_id AS goodsId,
+            g.title AS goodsTitle,
+            SUBSTRING_INDEX(g.images, ',', 1) AS goodsImage,
+            g.price AS goodsPrice,
+            CASE WHEN cm.content IS NOT NULL AND cm.content != '' THEN cm.content ELSE '[图片]' END AS lastMessage,
+            cm.image_url AS lastMessageImageUrl,
+            cm.create_time AS lastMessageTime,
+            COALESCE(un.unread_count, 0) AS unreadCount
+        FROM chat_message cm
+        INNER JOIN (
+            -- 每个会话的最新消息时间（按用户对 + 商品分组）
+            SELECT
+                LEAST(sender_id, receiver_id) AS user_a,
+                GREATEST(sender_id, receiver_id) AS user_b,
+                goods_id,
+                MAX(create_time) AS max_time
+            FROM chat_message
+            WHERE #{userId} IN (sender_id, receiver_id)
+            GROUP BY LEAST(sender_id, receiver_id), GREATEST(sender_id, receiver_id), goods_id
+        ) latest ON LEAST(cm.sender_id, cm.receiver_id) = latest.user_a
+                AND GREATEST(cm.sender_id, cm.receiver_id) = latest.user_b
+                AND cm.goods_id = latest.goods_id
+                AND cm.create_time = latest.max_time
+        LEFT JOIN `user` u ON u.id = CASE WHEN cm.sender_id = #{userId} THEN cm.receiver_id ELSE cm.sender_id END
+        LEFT JOIN goods g ON g.id = cm.goods_id
+        LEFT JOIN (
+            SELECT sender_id, goods_id, COUNT(*) AS unread_count
+            FROM chat_message
+            WHERE receiver_id = #{userId} AND is_read = 0
+            GROUP BY sender_id, goods_id
+        ) un ON un.sender_id = CASE WHEN cm.sender_id = #{userId} THEN cm.receiver_id ELSE cm.sender_id END
+             AND un.goods_id = cm.goods_id
+        ORDER BY cm.create_time DESC
+    </select>
+
+    <!-- 获取未读消息数 -->
+    <select id="selectUnreadCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE receiver_id = #{receiverId}
+          AND sender_id = #{senderId}
+          AND goods_id = #{goodsId}
+          AND is_read = 0
+    </select>
+
+    <!-- 获取用户总未读消息数 -->
+    <select id="selectTotalUnreadCount" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM chat_message
+        WHERE receiver_id = #{userId} AND is_read = 0
+    </select>
+
+    <!-- 标记消息为已读 -->
+    <update id="markAsRead">
+        UPDATE chat_message
+        SET is_read = 1
+        WHERE receiver_id = #{receiverId}
+          AND sender_id = #{senderId}
+          AND goods_id = #{goodsId}
+          AND is_read = 0
+    </update>
+
+</mapper>

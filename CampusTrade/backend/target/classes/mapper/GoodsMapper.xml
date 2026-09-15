@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campustrade.mapper.GoodsMapper">
+
+    <!-- 基础结果映射 -->
+    <resultMap id="BaseResultMap" type="com.campustrade.entity.Goods">
+        <id column="id" property="id"/>
+        <result column="title" property="title"/>
+        <result column="description" property="description"/>
+        <result column="category_id" property="categoryId"/>
+        <result column="price" property="price"/>
+        <result column="original_price" property="originalPrice"/>
+        <result column="seller_id" property="sellerId"/>
+        <result column="images" property="images"/>
+        <result column="status" property="status"/>
+        <result column="view_count" property="viewCount"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <!-- 分页查询商品列表（关联分类和卖家信息） -->
+    <select id="selectGoodsWithDetails" resultMap="BaseResultMap">
+        SELECT g.* FROM goods g
+        <where>
+            <if test="categoryId != null">
+                AND g.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND g.status = #{status}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (g.title LIKE CONCAT('%', #{keyword}, '%')
+                OR g.description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY g.create_time DESC
+    </select>
+
+    <!-- 根据卖家ID查询商品列表 -->
+    <select id="selectBySellerId" resultMap="BaseResultMap">
+        SELECT * FROM goods
+        WHERE seller_id = #{sellerId}
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 统计在线商品总数 -->
+    <select id="countOnSale" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM goods WHERE status = 1
+    </select>
+
+    <!-- 增加浏览次数 -->
+    <update id="incrementViewCount">
+        UPDATE goods SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <!-- 统计待审核商品数量 -->
+    <select id="countPending" resultType="java.lang.Long">
+        SELECT COUNT(*) FROM goods WHERE status = 0
+    </select>
+</mapper>
