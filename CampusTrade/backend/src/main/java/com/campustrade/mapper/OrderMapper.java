@@ -46,4 +46,45 @@ public interface OrderMapper extends BaseMapper<Order> {
      * 统计总交易额
      */
     BigDecimal sumTotalAmount();
+
+    /**
+     * 条件更新订单状态（CAS）：只有当前状态等于 fromStatus 时才更新为 toStatus
+     * 用于支付、发货、确认收货、取消等状态流转，避免并发重复操作
+     *
+     * @return 受影响行数，0 表示状态已被其他请求改变
+     */
+    int updateStatus(@Param("id") Long id,
+                     @Param("fromStatus") Integer fromStatus,
+                     @Param("toStatus") Integer toStatus);
+
+    /**
+     * 买家申请退款：仅 已付款(1)/已发货(2) 且尚未申请过退款的订单可以申请
+     *
+     * @return 受影响行数
+     */
+    int applyRefund(@Param("id") Long id, @Param("reason") String reason);
+
+    /**
+     * 卖家同意退款：退款状态 1 -> 2，同时订单状态置为已取消(4)
+     *
+     * @return 受影响行数
+     */
+    int agreeRefund(@Param("id") Long id);
+
+    /**
+     * 卖家拒绝退款：退款状态 1 -> 3
+     *
+     * @return 受影响行数
+     */
+    int rejectRefund(@Param("id") Long id);
+
+    /**
+     * CAS 标记买家已评价
+     */
+    int markBuyerRated(@Param("id") Long id);
+
+    /**
+     * CAS 标记卖家已评价
+     */
+    int markSellerRated(@Param("id") Long id);
 }

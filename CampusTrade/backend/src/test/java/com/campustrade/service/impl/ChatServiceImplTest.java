@@ -1,6 +1,7 @@
 package com.campustrade.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.campustrade.cache.CacheService;
 import com.campustrade.dto.SendMessageDTO;
 import com.campustrade.entity.ChatMessage;
 import com.campustrade.entity.User;
@@ -42,6 +43,9 @@ class ChatServiceImplTest {
 
     @Mock
     private ChatWebSocketService chatWebSocketService;
+
+    @Mock
+    private CacheService cacheService;
 
     @InjectMocks
     private ChatServiceImpl chatService;

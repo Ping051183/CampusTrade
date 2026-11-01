@@ -1,5 +1,6 @@
 package com.campustrade.service.impl;
 
+import com.campustrade.cache.CacheService;
 import com.campustrade.constant.StatusConstant;
 import com.campustrade.entity.Category;
 import com.campustrade.entity.Goods;
@@ -40,6 +41,9 @@ class GoodsServiceImplTest {
 
     @Mock
     private CategoryMapper categoryMapper;
+
+    @Mock
+    private CacheService cacheService;
 
     @InjectMocks
     private GoodsServiceImpl goodsService;

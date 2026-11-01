@@ -21,6 +21,8 @@ public enum ErrorCode {
     PASSWORD_ERROR(1004, "密码错误"),
     OLD_PASSWORD_ERROR(1005, "原密码错误"),
     USERNAME_OR_PASSWORD_ERROR(1006, "用户名或密码错误"),
+    STUDENT_NO_INVALID(1007, "学号格式不正确"),
+    SCHOOL_NOT_SUPPORTED(1008, "暂仅支持广州工商学院学生注册"),
 
     // 商品模块错误码
     GOODS_NOT_FOUND(2001, "商品不存在"),
@@ -40,6 +42,13 @@ public enum ErrorCode {
     ORDER_STATUS_ERROR(5002, "订单状态错误"),
     ORDER_CANNOT_CANCEL(5003, "订单无法取消"),
     ORDER_CANNOT_CONFIRM(5004, "订单无法确认收货"),
+    ORDER_CANNOT_PAY(5005, "订单无法支付"),
+    ORDER_CANNOT_SHIP(5006, "订单无法发货"),
+    ORDER_CANNOT_REFUND(5007, "当前订单无法申请退款"),
+    ORDER_REFUND_PROCESSING(5008, "订单退款处理中"),
+    ORDER_ALREADY_RATED(5009, "该订单已评价"),
+    ORDER_CANNOT_AGREE_REFUND(5010, "订单无法同意退款"),
+    ORDER_CANNOT_REJECT_REFUND(5011, "订单无法拒绝退款"),
 
     // 评论模块
     COMMENT_NOT_FOUND(6001, "评论不存在"),

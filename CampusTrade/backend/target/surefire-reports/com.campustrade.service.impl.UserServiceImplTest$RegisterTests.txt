@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.campustrade.service.impl.UserServiceImplTest$RegisterTests
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.111 s -- in com.campustrade.service.impl.UserServiceImplTest$RegisterTests
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.128 s -- in com.campustrade.service.impl.UserServiceImplTest$RegisterTests

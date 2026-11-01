@@ -1,0 +1,33 @@
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campustrade.mapper.ReviewMapper">
+
+    <!-- 用户被评价列表：关联评价人和商品 -->
+    <select id="selectByRateeId" resultType="com.campustrade.vo.ReviewVO">
+        SELECT r.id,
+               r.order_id,
+               r.goods_id,
+               g.title   AS goodsTitle,
+               g.images  AS goodsImages,
+               r.rater_id,
+               COALESCE(u.nickname, u.username) AS raterName,
+               u.avatar  AS raterAvatar,
+               r.ratee_id,
+               r.score,
+               r.content,
+               r.create_time
+        FROM review r
+        LEFT JOIN `user` u ON u.id = r.rater_id
+        LEFT JOIN goods g ON g.id = r.goods_id
+        WHERE r.ratee_id = #{rateeId}
+        ORDER BY r.create_time DESC
+    </select>
+
+    <!-- 信用汇总：平均分、评价数、好评数（4-5 星） -->
+    <select id="selectSummary" resultType="com.campustrade.vo.ReviewSummaryVO">
+        SELECT COALESCE(ROUND(AVG(score), 2), 0) AS avgScore,
+               COUNT(*)                          AS count,
+               COALESCE(SUM(CASE WHEN score &gt;= 4 THEN 1 ELSE 0 END), 0) AS goodCount
+        FROM review
+        WHERE ratee_id = #{rateeId}
+    </select>
+</mapper>

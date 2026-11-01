@@ -2,6 +2,8 @@ package com.campustrade.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.campustrade.cache.CacheKeys;
+import com.campustrade.cache.CacheService;
 import com.campustrade.constant.StatusConstant;
 import com.campustrade.entity.Category;
 import com.campustrade.entity.Goods;
@@ -18,6 +20,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.List;
 
 /**
@@ -27,9 +30,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements GoodsService {
 
+    /** 商品详情缓存时长 */
+    private static final Duration GOODS_DETAIL_TTL = Duration.ofMinutes(5);
+
     private final GoodsMapper goodsMapper;
     private final UserMapper userMapper;
     private final CategoryMapper categoryMapper;
+    private final CacheService cacheService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -43,6 +50,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         goods.setStatus(StatusConstant.GOODS_PENDING);
         goods.setViewCount(0);
         goodsMapper.insert(goods);
+        cacheService.evict(CacheKeys.GOODS_DETAIL + goods.getId());
     }
 
     @Override
@@ -59,6 +67,8 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         // 更新后需要重新审核
         goods.setStatus(StatusConstant.GOODS_PENDING);
         goodsMapper.updateById(goods);
+        // 商品信息已变化，删除详情缓存，避免读到旧数据
+        cacheService.evict(CacheKeys.GOODS_DETAIL + goods.getId());
     }
 
     @Override
@@ -72,6 +82,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             throw new BusinessException(ErrorCode.GOODS_NOT_YOURS);
         }
         goodsMapper.deleteById(goodsId);
+        cacheService.evict(CacheKeys.GOODS_DETAIL + goodsId);
     }
 
     @Override
@@ -86,10 +97,19 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
         }
         goods.setStatus(StatusConstant.GOODS_OFFLINE);
         goodsMapper.updateById(goods);
+        cacheService.evict(CacheKeys.GOODS_DETAIL + goodsId);
     }
 
     @Override
     public GoodsVO getGoodsDetail(Long goodsId) {
+        String cacheKey = CacheKeys.GOODS_DETAIL + goodsId;
+
+        // 先查缓存（Redis / 本地），命中后返回副本，避免调用方补充的收藏信息污染缓存
+        GoodsVO cached = cacheService.get(cacheKey, GoodsVO.class);
+        if (cached != null) {
+            return copyOf(cached);
+        }
+
         Goods goods = goodsMapper.selectById(goodsId);
         if (goods == null) {
             throw new BusinessException(ErrorCode.GOODS_NOT_FOUND);
@@ -112,7 +132,18 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
             goodsVO.setSellerSchool(seller.getSchool());
         }
 
+        // 写入缓存：商品详情属于典型的读多写少数据，缓存 5 分钟
+        cacheService.put(cacheKey, copyOf(goodsVO), GOODS_DETAIL_TTL);
         return goodsVO;
+    }
+
+    /**
+     * 拷贝一份商品VO，避免缓存对象被外部修改
+     */
+    private GoodsVO copyOf(GoodsVO source) {
+        GoodsVO copy = new GoodsVO();
+        BeanUtils.copyProperties(source, copy);
+        return copy;
     }
 
     @Override
@@ -131,6 +162,8 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods> implements
 
         goods.setStatus(status);
         goodsMapper.updateById(goods);
+        // 审核结果会影响商品状态，删除详情缓存
+        cacheService.evict(CacheKeys.GOODS_DETAIL + goodsId);
     }
 
     @Override

@@ -18,7 +18,9 @@ spring:
       host: localhost
       port: 6379
       database: 0
-      timeout: 5000ms
+      # 连接超时：本地没装 Redis 时快速失败并降级为进程内缓存，避免启动卡顿
+      connect-timeout: 2000ms
+      timeout: 3000ms
       lettuce:
         pool:
           max-active: 8

@@ -39,6 +39,18 @@ public class Order {
     /** 备注 */
     private String remark;
 
+    /** 买家是否已评价: 0-否 1-是 */
+    private Integer isRated;
+
+    /** 卖家是否已评价: 0-否 1-是 */
+    private Integer sellerRated;
+
+    /** 退款状态: 0-无 1-申请中 2-已退款 3-已拒绝 */
+    private Integer refundStatus;
+
+    /** 退款原因 */
+    private String refundReason;
+
     /** 创建时间 */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT)

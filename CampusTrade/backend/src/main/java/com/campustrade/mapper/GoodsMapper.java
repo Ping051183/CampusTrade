@@ -38,4 +38,18 @@ public interface GoodsMapper extends BaseMapper<Goods> {
      * 统计待审核商品数量
      */
     Long countPending();
+
+    /**
+     * 抢占商品（原子操作：仅当商品处于在售状态时置为已售出）
+     *
+     * @return 受影响行数，0 表示商品已被他人抢先下单
+     */
+    int markSold(@Param("id") Long id);
+
+    /**
+     * 取消订单时恢复商品为在售（原子操作：仅当商品为已售出状态时恢复）
+     *
+     * @return 受影响行数
+     */
+    int restoreOnSale(@Param("id") Long id);
 }

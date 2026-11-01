@@ -24,9 +24,34 @@ public interface OrderService extends IService<Order> {
     void cancelOrder(Long orderId, Long userId);
 
     /**
-     * 确认收货
+     * 支付订单（模拟支付：待付款 -> 已付款）
+     */
+    void payOrder(Long orderId, Long userId);
+
+    /**
+     * 卖家发货（已付款 -> 已发货）
+     */
+    void shipOrder(Long orderId, Long userId);
+
+    /**
+     * 确认收货（已付款/已发货 -> 已收货）
      */
     void confirmReceipt(Long orderId, Long userId);
+
+    /**
+     * 买家申请退款（已付款/已发货 -> 退款申请中）
+     */
+    void applyRefund(Long orderId, Long userId, String reason);
+
+    /**
+     * 卖家同意退款（退款申请中 -> 已退款，订单取消、商品恢复在售）
+     */
+    void agreeRefund(Long orderId, Long userId);
+
+    /**
+     * 卖家拒绝退款（退款申请中 -> 已拒绝）
+     */
+    void rejectRefund(Long orderId, Long userId);
 
     /**
      * 根据订单编号查询订单

@@ -86,6 +86,28 @@ public class OrderController {
     }
 
     /**
+     * 支付订单（模拟支付）
+     */
+    @PutMapping("/pay/{id}")
+    @Operation(summary = "支付订单（模拟支付）")
+    public Result<Void> payOrder(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        orderService.payOrder(id, userId);
+        return Result.success("支付成功", null);
+    }
+
+    /**
+     * 卖家发货
+     */
+    @PutMapping("/ship/{id}")
+    @Operation(summary = "卖家发货")
+    public Result<Void> shipOrder(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        orderService.shipOrder(id, userId);
+        return Result.success("已发货", null);
+    }
+
+    /**
      * 确认收货
      */
     @PutMapping("/confirm/{id}")
@@ -94,5 +116,39 @@ public class OrderController {
         Long userId = SecurityUtil.getCurrentUserId();
         orderService.confirmReceipt(id, userId);
         return Result.success("已确认收货", null);
+    }
+
+    /**
+     * 买家申请退款
+     */
+    @PostMapping("/refund/{id}")
+    @Operation(summary = "买家申请退款")
+    public Result<Void> applyRefund(@PathVariable Long id,
+                                    @RequestParam(required = false) String reason) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        orderService.applyRefund(id, userId, reason);
+        return Result.success("退款申请已提交，等待卖家处理", null);
+    }
+
+    /**
+     * 卖家同意退款
+     */
+    @PutMapping("/refund/agree/{id}")
+    @Operation(summary = "卖家同意退款")
+    public Result<Void> agreeRefund(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        orderService.agreeRefund(id, userId);
+        return Result.success("已同意退款", null);
+    }
+
+    /**
+     * 卖家拒绝退款
+     */
+    @PutMapping("/refund/reject/{id}")
+    @Operation(summary = "卖家拒绝退款")
+    public Result<Void> rejectRefund(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        orderService.rejectRefund(id, userId);
+        return Result.success("已拒绝退款", null);
     }
 }

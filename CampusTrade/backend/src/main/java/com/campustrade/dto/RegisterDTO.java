@@ -2,6 +2,7 @@ package com.campustrade.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -31,9 +32,12 @@ public class RegisterDTO {
     @Schema(description = "邮箱")
     private String email;
 
-    @Schema(description = "学号")
+    @Schema(description = "学号（12位：4位入学年份+6位专业班级+2位班内序号）", required = true)
+    @NotBlank(message = "学号不能为空")
+    @Pattern(regexp = "^20\\d{10}$", message = "学号应为12位数字，如 202310610320")
     private String studentNo;
 
-    @Schema(description = "学校")
+    @Schema(description = "学校（目前仅支持广州工商学院）", required = true)
+    @NotBlank(message = "学校不能为空")
     private String school;
 }

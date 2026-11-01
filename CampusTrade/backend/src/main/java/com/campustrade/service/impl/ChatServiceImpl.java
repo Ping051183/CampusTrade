@@ -2,6 +2,8 @@ package com.campustrade.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.campustrade.cache.CacheKeys;
+import com.campustrade.cache.CacheService;
 import com.campustrade.dto.SendMessageDTO;
 import com.campustrade.entity.ChatMessage;
 import com.campustrade.entity.User;
@@ -18,6 +20,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -32,6 +35,10 @@ public class ChatServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage>
     private final ChatMessageMapper chatMessageMapper;
     private final UserMapper userMapper;
     private final ChatWebSocketService chatWebSocketService;
+    private final CacheService cacheService;
+
+    /** 未读消息数缓存时长（秒级即可，避免每次刷新页面都全表统计） */
+    private static final Duration UNREAD_TTL = Duration.ofSeconds(60);
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -75,9 +82,9 @@ public class ChatServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage>
 
         // 通过 WebSocket 推送消息给接收者
         if (sendMessageDTO.getReceiverId() != null) {
-            // 获取接收者的未读数
-            Integer unreadCount = chatMessageMapper.selectTotalUnreadCount(sendMessageDTO.getReceiverId());
-            chatWebSocketService.notifyReceiver(sendMessageDTO.getReceiverId(), vo, unreadCount != null ? unreadCount : 0);
+            // 获取接收者的未读数（顺带刷新缓存）
+            Integer unreadCount = refreshUnreadCount(sendMessageDTO.getReceiverId());
+            chatWebSocketService.notifyReceiver(sendMessageDTO.getReceiverId(), vo, unreadCount);
         }
 
         // 也推送给发送者（确认消息已送达）
@@ -124,11 +131,26 @@ public class ChatServiceImpl extends ServiceImpl<ChatMessageMapper, ChatMessage>
     @Transactional(rollbackFor = Exception.class)
     public void markAsRead(Long userId, Long senderId, Long goodsId) {
         chatMessageMapper.markAsRead(userId, senderId, goodsId);
+        // 已读后未读数变化，清掉缓存
+        cacheService.evict(CacheKeys.CHAT_UNREAD + userId);
     }
 
     @Override
     public Integer getUnreadCount(Long userId) {
+        Integer cached = cacheService.get(CacheKeys.CHAT_UNREAD + userId, Integer.class);
+        if (cached != null) {
+            return cached;
+        }
+        return refreshUnreadCount(userId);
+    }
+
+    /**
+     * 查库统计未读数并写入缓存
+     */
+    private Integer refreshUnreadCount(Long userId) {
         Integer count = chatMessageMapper.selectTotalUnreadCount(userId);
-        return count != null ? count : 0;
+        int value = count != null ? count : 0;
+        cacheService.put(CacheKeys.CHAT_UNREAD + userId, value, UNREAD_TTL);
+        return value;
     }
 }

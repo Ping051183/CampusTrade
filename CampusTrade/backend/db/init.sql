@@ -99,6 +99,10 @@ CREATE TABLE `orders` (
     `amount` DECIMAL(10,2) NOT NULL COMMENT '订单金额',
     `status` TINYINT NOT NULL DEFAULT 0 COMMENT '订单状态: 0-待付款 1-已付款 2-已发货 3-已收货 4-已取消 5-已完成',
     `remark` VARCHAR(500) DEFAULT NULL COMMENT '备注',
+    `is_rated` TINYINT NOT NULL DEFAULT 0 COMMENT '买家是否已评价: 0-否 1-是',
+    `seller_rated` TINYINT NOT NULL DEFAULT 0 COMMENT '卖家是否已评价: 0-否 1-是',
+    `refund_status` TINYINT NOT NULL DEFAULT 0 COMMENT '退款状态: 0-无 1-申请中 2-已退款 3-已拒绝',
+    `refund_reason` VARCHAR(500) DEFAULT NULL COMMENT '退款原因',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
@@ -157,23 +161,42 @@ CREATE TABLE `notice` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='公告表';
 
--- ========================================
--- 初始化数据
--- ========================================
+-- ----------------------------------------
+-- 交易评价表
+-- ----------------------------------------
+DROP TABLE IF EXISTS `review`;
+CREATE TABLE `review` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '评价ID',
+    `order_id` BIGINT NOT NULL COMMENT '订单ID',
+    `goods_id` BIGINT NOT NULL COMMENT '商品ID',
+    `rater_id` BIGINT NOT NULL COMMENT '评价人ID',
+    `ratee_id` BIGINT NOT NULL COMMENT '被评价人ID',
+    `score` TINYINT NOT NULL COMMENT '评分 1-5',
+    `content` VARCHAR(500) DEFAULT NULL COMMENT '评价内容',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_order_rater` (`order_id`, `rater_id`),
+    KEY `idx_ratee_id` (`ratee_id`),
+    KEY `idx_goods_id` (`goods_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='交易评价表';
 
--- 插入商品分类
-INSERT INTO `category` (`category_name`, `sort`) VALUES
-('数码产品', 1),
-('图书教材', 2),
-('生活用品', 3),
-('体育用品', 4),
-('宿舍用品', 5),
-('服装鞋帽', 6),
-('其他', 7);
-
--- 插入管理员账户 (密码: admin123, BCrypt加密)
-INSERT INTO `user` (`username`, `password`, `nickname`, `role`, `status`) VALUES
-('admin', '$2a$10$GuRwu7PRfefHUWAvVFiGCehjMvW.udODd/nHx9cl9YVX15Z9oDagW', '系统管理员', 0, 1);
+-- ----------------------------------------
+-- 系统通知表
+-- ----------------------------------------
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+    `user_id` BIGINT NOT NULL COMMENT '接收人ID',
+    `type` VARCHAR(30) NOT NULL COMMENT '通知类型: ORDER_PAID/ORDER_SHIPPED/REFUND_APPLY...',
+    `title` VARCHAR(100) NOT NULL COMMENT '标题',
+    `content` VARCHAR(500) DEFAULT NULL COMMENT '内容',
+    `related_id` BIGINT DEFAULT NULL COMMENT '关联ID(订单/商品等)',
+    `is_read` TINYINT NOT NULL DEFAULT 0 COMMENT '是否已读: 0-否 1-是',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_read` (`user_id`, `is_read`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知表';
 
 -- ----------------------------------------
 -- 聊天消息表
@@ -195,6 +218,24 @@ CREATE TABLE `chat_message` (
     KEY `idx_conversation` (`sender_id`, `receiver_id`, `goods_id`),
     KEY `idx_create_time` (`create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='聊天消息表';
+
+-- ========================================
+-- 初始化数据
+-- ========================================
+
+-- 插入商品分类
+INSERT INTO `category` (`category_name`, `sort`) VALUES
+('数码产品', 1),
+('图书教材', 2),
+('生活用品', 3),
+('体育用品', 4),
+('宿舍用品', 5),
+('服装鞋帽', 6),
+('其他', 7);
+
+-- 插入管理员账户 (密码: admin123, BCrypt加密)
+INSERT INTO `user` (`username`, `password`, `nickname`, `role`, `status`) VALUES
+('admin', '$2a$10$GuRwu7PRfefHUWAvVFiGCehjMvW.udODd/nHx9cl9YVX15Z9oDagW', '系统管理员', 0, 1);
 
 -- ========================================
 -- 索引与外键说明（通过程序保证数据一致性，不建物理外键以提升性能）

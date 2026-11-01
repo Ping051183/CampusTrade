@@ -12,6 +12,10 @@
         <result column="amount" property="amount"/>
         <result column="status" property="status"/>
         <result column="remark" property="remark"/>
+        <result column="is_rated" property="isRated"/>
+        <result column="seller_rated" property="sellerRated"/>
+        <result column="refund_status" property="refundStatus"/>
+        <result column="refund_reason" property="refundReason"/>
         <result column="create_time" property="createTime"/>
         <result column="update_time" property="updateTime"/>
     </resultMap>
@@ -59,4 +63,46 @@
         SELECT COALESCE(SUM(amount), 0) FROM orders
         WHERE status IN (3, 5)
     </select>
+
+    <!-- 条件更新订单状态（CAS），并发重复支付/发货/确认时只有一次能成功 -->
+    <update id="updateStatus">
+        UPDATE orders
+        SET status = #{toStatus}, update_time = NOW()
+        WHERE id = #{id} AND status = #{fromStatus}
+    </update>
+
+    <!-- 买家申请退款：仅已付款/已发货且未申请过 -->
+    <update id="applyRefund">
+        UPDATE orders
+        SET refund_status = 1, refund_reason = #{reason}, update_time = NOW()
+        WHERE id = #{id} AND refund_status = 0 AND status IN (1, 2)
+    </update>
+
+    <!-- 卖家同意退款：退款状态 1 -> 2，订单置为已取消 -->
+    <update id="agreeRefund">
+        UPDATE orders
+        SET refund_status = 2, status = 4, update_time = NOW()
+        WHERE id = #{id} AND refund_status = 1
+    </update>
+
+    <!-- 卖家拒绝退款：退款状态 1 -> 3 -->
+    <update id="rejectRefund">
+        UPDATE orders
+        SET refund_status = 3, update_time = NOW()
+        WHERE id = #{id} AND refund_status = 1
+    </update>
+
+    <!-- CAS 标记买家已评价 -->
+    <update id="markBuyerRated">
+        UPDATE orders
+        SET is_rated = 1, update_time = NOW()
+        WHERE id = #{id} AND is_rated = 0 AND status IN (3, 5)
+    </update>
+
+    <!-- CAS 标记卖家已评价 -->
+    <update id="markSellerRated">
+        UPDATE orders
+        SET seller_rated = 1, update_time = NOW()
+        WHERE id = #{id} AND seller_rated = 0 AND status IN (3, 5)
+    </update>
 </mapper>

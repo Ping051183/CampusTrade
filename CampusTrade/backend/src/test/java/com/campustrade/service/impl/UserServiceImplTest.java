@@ -67,7 +67,8 @@ class UserServiceImplTest {
             dto.setPassword("password123");
             dto.setNickname("New User");
             dto.setPhone("13800138000");
-            dto.setSchool("Test University");
+            dto.setStudentNo("202310610320");
+            dto.setSchool("广州工商学院");
 
             when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(0L);
 
@@ -79,6 +80,49 @@ class UserServiceImplTest {
             assertTrue(passwordEncoder.matches("password123", saved.getPassword()));
             assertEquals(RoleConstant.USER, saved.getRole());
             assertEquals(StatusConstant.USER_ENABLED, saved.getStatus());
+            assertEquals("202310610320", saved.getStudentNo());
+            assertEquals("广州工商学院", saved.getSchool());
+        }
+
+        @Test
+        @DisplayName("学校不是广州工商学院时抛出异常")
+        void register_schoolNotSupported() {
+            RegisterDTO dto = new RegisterDTO();
+            dto.setUsername("newuser");
+            dto.setPassword("password123");
+            dto.setStudentNo("202310610320");
+            dto.setSchool("某其他大学");
+
+            BusinessException ex = assertThrows(BusinessException.class, () -> userService.register(dto));
+            assertEquals(ErrorCode.SCHOOL_NOT_SUPPORTED.getCode(), ex.getCode());
+            verify(userMapper, never()).insert(any(User.class));
+        }
+
+        @Test
+        @DisplayName("学号格式不合法时抛出异常")
+        void register_studentNoInvalid() {
+            RegisterDTO dto = new RegisterDTO();
+            dto.setUsername("newuser");
+            dto.setPassword("password123");
+            dto.setStudentNo("12345");
+            dto.setSchool("广州工商学院");
+
+            BusinessException ex = assertThrows(BusinessException.class, () -> userService.register(dto));
+            assertEquals(ErrorCode.STUDENT_NO_INVALID.getCode(), ex.getCode());
+            verify(userMapper, never()).insert(any(User.class));
+        }
+
+        @Test
+        @DisplayName("学号入学年份不合理时抛出异常")
+        void register_studentNoBadYear() {
+            RegisterDTO dto = new RegisterDTO();
+            dto.setUsername("newuser");
+            dto.setPassword("password123");
+            dto.setStudentNo("209910610320");
+            dto.setSchool("广州工商学院");
+
+            BusinessException ex = assertThrows(BusinessException.class, () -> userService.register(dto));
+            assertEquals(ErrorCode.STUDENT_NO_INVALID.getCode(), ex.getCode());
         }
 
         @Test
@@ -87,6 +131,8 @@ class UserServiceImplTest {
             RegisterDTO dto = new RegisterDTO();
             dto.setUsername("existing");
             dto.setPassword("password123");
+            dto.setStudentNo("202310610320");
+            dto.setSchool("广州工商学院");
 
             when(userMapper.selectCount(any(LambdaQueryWrapper.class))).thenReturn(1L);
 
@@ -230,7 +276,8 @@ class UserServiceImplTest {
             UserUpdateDTO dto = new UserUpdateDTO();
             dto.setNickname("New Nickname");
             dto.setPhone("13900139000");
-            dto.setSchool("New School");
+            dto.setStudentNo("202310610321");
+            dto.setSchool("广州工商学院");
 
             when(userMapper.selectById(1L)).thenReturn(existing);
 
@@ -241,7 +288,8 @@ class UserServiceImplTest {
             assertEquals(1L, updated.getId());
             assertEquals("New Nickname", updated.getNickname());
             assertEquals("13900139000", updated.getPhone());
-            assertEquals("New School", updated.getSchool());
+            assertEquals("202310610321", updated.getStudentNo());
+            assertEquals("广州工商学院", updated.getSchool());
         }
 
         @Test

@@ -37,6 +37,8 @@ public class SecurityConfig {
             "/api/goods/search",
             "/api/notice/list",
             "/api/chat/unread/count",
+            "/api/review/user/**",
+            "/api/review/summary/**",
             "/ws/**",
             "/doc.html",
             "/v3/api-docs/**",
