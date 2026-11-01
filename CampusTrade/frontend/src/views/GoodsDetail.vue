@@ -52,6 +52,10 @@
               <div class="seller-detail">
                 <span class="seller-name">{{ goods.sellerName }}</span>
                 <span class="seller-school" v-if="goods.sellerSchool">{{ goods.sellerSchool }}</span>
+                <span class="seller-credit" v-if="sellerCredit && sellerCredit.count > 0">
+                  <el-icon><Star /></el-icon>
+                  信用 {{ sellerCredit.avgScore.toFixed(1) }} 分 · 好评率 {{ sellerCredit.goodRate }}% · {{ sellerCredit.count }} 条评价
+                </span>
               </div>
             </div>
             <el-divider />
@@ -135,10 +139,11 @@ import { goodsAPI } from '@/api/goods'
 import { favoriteAPI } from '@/api/favorite'
 import { commentAPI } from '@/api/comment'
 import { orderAPI } from '@/api/order'
+import { reviewAPI } from '@/api/review'
 import { useUserStore } from '@/stores/user'
 import Header from '@/components/Header.vue'
 import Footer from '@/components/Footer.vue'
-import type { GoodsVO, Comment } from '@/api/types'
+import type { GoodsVO, Comment, ReviewSummary } from '@/api/types'
 
 const route = useRoute()
 const router = useRouter()
@@ -146,6 +151,7 @@ const userStore = useUserStore()
 
 const goods = ref<GoodsVO | null>(null)
 const comments = ref<Comment[]>([])
+const sellerCredit = ref<ReviewSummary | null>(null)
 const loading = ref(true)
 const commentContent = ref('')
 const currentIdx = ref(0)
@@ -176,12 +182,26 @@ async function loadGoods() {
       goodsAPI.getDetail(goodsId.value),
       commentAPI.getList(goodsId.value)
     ])
-    if (goodsRes.data) goods.value = goodsRes.data
+    if (goodsRes.data) {
+      goods.value = goodsRes.data
+      loadSellerCredit(goodsRes.data.sellerId)
+    }
     if (commentRes.data) comments.value = commentRes.data
   } catch (e) {
     console.error('加载商品详情失败', e)
   } finally {
     loading.value = false
+  }
+}
+
+/** 加载卖家信用分（不影响详情主流程，失败静默） */
+async function loadSellerCredit(sellerId?: number) {
+  if (!sellerId) return
+  try {
+    const res = await reviewAPI.summary(sellerId)
+    if (res.data) sellerCredit.value = res.data
+  } catch (e) {
+    // 静默
   }
 }
 
@@ -213,10 +233,10 @@ async function handleBuy() {
     return
   }
   try {
-    ElMessageBox.confirm('确认购买该商品？', '购买确认').then(async () => {
+    ElMessageBox.confirm('确认购买该商品？下单后请在我的订单中完成支付。', '购买确认').then(async () => {
       const res = await orderAPI.create(goodsId.value)
       if (res.data) {
-        ElMessage.success('下单成功')
+        ElMessage.success('下单成功，请尽快完成支付')
         router.push(`/my/orders`)
       }
     }).catch(() => {})
@@ -374,6 +394,14 @@ async function handleComment() {
 .seller-school {
   font-size: 12px;
   color: #909399;
+}
+
+.seller-credit {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #e6a23c;
 }
 
 .description h3 {

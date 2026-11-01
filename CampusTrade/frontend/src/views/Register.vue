@@ -26,10 +26,12 @@
             <el-input v-model="form.email" placeholder="选填" />
           </el-form-item>
           <el-form-item label="学号" prop="studentNo">
-            <el-input v-model="form.studentNo" placeholder="选填" />
+            <el-input v-model="form.studentNo" placeholder="如 202310610320（12位）" maxlength="12" />
+            <div class="form-tip">4位入学年份 + 6位专业班级 + 2位班内学号</div>
           </el-form-item>
           <el-form-item label="学校" prop="school">
-            <el-input v-model="form.school" placeholder="选填" />
+            <el-input v-model="form.school" disabled />
+            <div class="form-tip">目前仅支持广州工商学院学生注册</div>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" size="large" class="submit-btn" :loading="submitting" @click="handleRegister">
@@ -71,8 +73,27 @@ const form = reactive({
   phone: '',
   email: '',
   studentNo: '',
-  school: ''
+  school: '广州工商学院'
 })
+
+/** 学号规则：12 位数字 = 4 位入学年份 + 6 位专业班级 + 2 位班内学号 */
+const STUDENT_NO_REGEX = /^20\d{10}$/
+
+const validateStudentNo = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback(new Error('请输入学号'))
+  } else if (!STUDENT_NO_REGEX.test(value)) {
+    callback(new Error('学号应为12位数字，前4位为入学年份，如 202310610320'))
+  } else {
+    const year = Number(value.substring(0, 4))
+    const now = new Date().getFullYear()
+    if (year < 2010 || year > now + 1) {
+      callback(new Error('学号中的入学年份不合理'))
+    } else {
+      callback()
+    }
+  }
+}
 
 const validatePass = (_rule: any, value: string, callback: any) => {
   if (value !== form.password) {
@@ -94,6 +115,13 @@ const rules: FormRules = {
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
     { validator: validatePass, trigger: 'blur' }
+  ],
+  studentNo: [
+    { required: true, message: '请输入学号', trigger: 'blur' },
+    { validator: validateStudentNo, trigger: 'blur' }
+  ],
+  school: [
+    { required: true, message: '学校不能为空', trigger: 'change' }
   ]
 }
 
@@ -110,8 +138,8 @@ async function handleRegister() {
       nickname: form.nickname || undefined,
       phone: form.phone || undefined,
       email: form.email || undefined,
-      studentNo: form.studentNo || undefined,
-      school: form.school || undefined
+      studentNo: form.studentNo,
+      school: form.school || '广州工商学院'
     })
     if (success) {
       ElMessage.success('注册成功，请登录')
@@ -163,5 +191,12 @@ async function handleRegister() {
 .form-footer a {
   color: #409eff;
   text-decoration: none;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.6;
+  margin-top: 2px;
 }
 </style>

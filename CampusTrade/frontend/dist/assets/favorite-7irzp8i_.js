@@ -1,0 +1,1 @@
+import{x as t}from"./index-CJgXzvec.js";const a={add(e){return t.post(`/favorite/add/${e}`)},cancel(e){return t.delete(`/favorite/cancel/${e}`)},getMyFavorites(){return t.get("/favorite/my")},check(e){return t.get(`/favorite/check/${e}`)}};export{a as f};

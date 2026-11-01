@@ -31,8 +31,8 @@ export interface RegisterDTO {
   nickname?: string
   phone?: string
   email?: string
-  studentNo?: string
-  school?: string
+  studentNo: string
+  school: string
 }
 
 /** 登录返回 */
@@ -133,8 +133,52 @@ export interface Order {
   amount: number
   status: number
   remark: string
+  isRated: number
+  sellerRated: number
+  refundStatus: number
+  refundReason?: string
   createTime: string
   updateTime: string
+}
+
+// ========== 交易评价 ==========
+
+/** 交易评价 */
+export interface Review {
+  id: number
+  orderId: number
+  goodsId: number
+  goodsTitle?: string
+  goodsImages?: string
+  raterId: number
+  raterName: string
+  raterAvatar?: string
+  rateeId: number
+  score: number
+  content?: string
+  createTime: string
+}
+
+/** 用户信用汇总 */
+export interface ReviewSummary {
+  avgScore: number
+  count: number
+  goodCount: number
+  goodRate: number
+}
+
+// ========== 系统通知 ==========
+
+/** 系统通知 */
+export interface Notification {
+  id: number
+  userId: number
+  type: string
+  title: string
+  content?: string
+  relatedId?: number
+  isRead: number
+  createTime: string
 }
 
 // ========== 评论 ==========

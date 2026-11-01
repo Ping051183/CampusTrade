@@ -20,6 +20,11 @@
 
       <div class="header-actions">
         <template v-if="userStore.isLoggedIn">
+          <span class="notice-entry" title="系统通知" @click="$router.push('/my/notifications')">
+            <el-badge :value="noticeCount" :hidden="noticeCount === 0" :max="99">
+              <el-icon :size="20"><Bell /></el-icon>
+            </el-badge>
+          </span>
           <el-button type="primary" size="small" @click="$router.push('/goods/publish')">
             <el-icon><Plus /></el-icon>发布商品
           </el-button>
@@ -61,8 +66,10 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
+import { Bell } from '@element-plus/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { chatAPI } from '@/api/chat'
+import { notificationAPI } from '@/api/notification'
 import { useWebSocket } from '@/composables/useWebSocket'
 
 const router = useRouter()
@@ -70,10 +77,15 @@ const userStore = useUserStore()
 const { subscribe, unsubscribe, disconnect } = useWebSocket()
 
 const unreadCount = ref(0)
+const noticeCount = ref(0)
+let noticeTimer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
   if (userStore.isLoggedIn) {
     fetchUnreadCount()
+    fetchNoticeCount()
+    // 每 30 秒刷新一次系统通知未读数
+    noticeTimer = setInterval(fetchNoticeCount, 30000)
     // 通过 WebSocket 实时接收未读数更新
     subscribe('/queue/unread', (count: number) => {
       unreadCount.value = count
@@ -83,7 +95,18 @@ onMounted(() => {
 
 onUnmounted(() => {
   unsubscribe('/queue/unread')
+  if (noticeTimer) clearInterval(noticeTimer)
 })
+
+async function fetchNoticeCount() {
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await notificationAPI.unreadCount()
+    if (res.data !== undefined) noticeCount.value = res.data
+  } catch (e) {
+    // silent
+  }
+}
 
 async function fetchUnreadCount() {
   try {
@@ -190,6 +213,27 @@ function handleCommand(command: string) {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.notice-entry {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #606266;
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.notice-entry:hover {
+  background: #f5f7fa;
+  color: #409eff;
+}
+
+.notice-entry :deep(.el-badge__content) {
+  background-color: #f56c6c;
+  border: none;
+  font-size: 11px;
 }
 
 .user-info {

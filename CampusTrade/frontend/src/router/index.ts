@@ -83,6 +83,13 @@ const router = createRouter({
       component: () => import('@/views/MyChats.vue'),
       meta: { requiresAuth: true }
     },
+    // 系统通知
+    {
+      path: '/my/notifications',
+      name: 'Notifications',
+      component: () => import('@/views/Notifications.vue'),
+      meta: { requiresAuth: true }
+    },
     // 聊天详情
     {
       path: '/chat',

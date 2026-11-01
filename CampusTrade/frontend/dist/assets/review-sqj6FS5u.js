@@ -1,0 +1,1 @@
+import{x as r}from"./index-CJgXzvec.js";const u={create(e){return r.post("/review",e)},pageByUser(e,t){return r.get(`/review/user/${e}`,{params:t})},summary(e){return r.get(`/review/summary/${e}`)}};export{u as r};
