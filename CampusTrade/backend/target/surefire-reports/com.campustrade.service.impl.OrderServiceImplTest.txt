@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.campustrade.service.impl.OrderServiceImplTest
--------------------------------------------------------------------------------
-Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.141 s -- in com.campustrade.service.impl.OrderServiceImplTest

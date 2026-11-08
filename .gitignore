@@ -1,0 +1,35 @@
+# ===== 构建产物 =====
+target/
+build/
+dist/
+.build-tmp/
+*.class
+
+# ===== 依赖 =====
+node_modules/
+
+# ===== 运行期产物 =====
+logs/
+*.log
+backend/uploads/
+.e2e-tmp/
+.resume-check/
+
+# ===== IDE =====
+.idea/
+*.iml
+.vscode/
+*.ipr
+*.iws
+
+# ===== 本地归档/安装包 =====
+*.zip
+*.tar.gz
+.freebuff/
+
+# ===== 交付副本（由 CampusTrade 生成，不入库） =====
+CampusTrade-release/
+
+# ===== 系统文件 =====
+.DS_Store
+Thumbs.db
