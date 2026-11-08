@@ -1,0 +1,21 @@
+# ---------- 后端 ----------
+backend/target/
+backend/.idea/
+backend/mvn-test.log
+backend/app-run.log
+backend/app-run.err.log
+
+# ---------- 前端 ----------
+frontend/node_modules/
+frontend/dist/
+frontend/.build-tmp/
+
+# ---------- 运行时产物 ----------
+dump.rdb
+*.log
+.tmp/
+
+# ---------- 操作系统 ----------
+.DS_Store
+Thumbs.db
+desktop.ini

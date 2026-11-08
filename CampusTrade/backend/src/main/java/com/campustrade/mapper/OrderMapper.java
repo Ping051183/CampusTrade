@@ -8,6 +8,8 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 订单Mapper接口
@@ -87,4 +89,13 @@ public interface OrderMapper extends BaseMapper<Order> {
      * CAS 标记卖家已评价
      */
     int markSellerRated(@Param("id") Long id);
+
+    /**
+     * 查询超时未支付的订单ID（定时任务自动取消用）
+     *
+     * @param deadline 创建时间早于该时间点的订单视为超时
+     * @param limit    单批最大处理数量
+     */
+    List<Long> selectTimeoutUnpaidIds(@Param("deadline") LocalDateTime deadline,
+                                      @Param("limit") int limit);
 }

@@ -1,6 +1,7 @@
 package com.campustrade.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -24,12 +25,16 @@ public class RegisterDTO {
     private String password;
 
     @Schema(description = "昵称")
+    @Size(max = 50, message = "昵称不能超过50个字符")
     private String nickname;
 
     @Schema(description = "手机号")
+    @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "手机号格式不正确，应为11位数字且以1开头")
     private String phone;
 
     @Schema(description = "邮箱")
+    @Email(message = "邮箱格式不正确")
+    @Size(max = 100, message = "邮箱不能超过100个字符")
     private String email;
 
     @Schema(description = "学号（12位：4位入学年份+6位专业班级+2位班内序号）", required = true)

@@ -19,6 +19,21 @@
     </section>
 
     <div class="page-container">
+      <!-- 系统公告：置顶横条，发布后立刻可见 -->
+      <section v-if="notices.length > 0" class="notice-bar" aria-label="系统公告">
+        <div class="notice-bar-head">
+          <el-icon class="notice-bar-icon"><BellFilled /></el-icon>
+          <span>系统公告</span>
+        </div>
+        <ul class="notice-bar-list">
+          <li v-for="notice in notices.slice(0, 3)" :key="notice.id" class="notice-bar-item">
+            <span class="notice-bar-item-title" :title="notice.title">{{ notice.title }}</span>
+            <span class="notice-bar-item-content" :title="notice.content">{{ notice.content }}</span>
+            <span class="notice-bar-item-time">{{ notice.createTime }}</span>
+          </li>
+        </ul>
+      </section>
+
       <!-- 分类导航 -->
       <section class="section">
         <h2 class="section-title">商品分类</h2>
@@ -55,19 +70,6 @@
           <GoodsCard v-for="item in goodsList" :key="item.id" :goods="item" />
         </div>
       </section>
-
-      <!-- 公告 -->
-      <section v-if="notices.length > 0" class="section">
-        <h2 class="section-title">系统公告</h2>
-        <el-card v-for="notice in notices" :key="notice.id" class="notice-card" shadow="hover">
-          <div class="notice-header">
-            <el-tag size="small" type="info">公告</el-tag>
-            <span class="notice-title">{{ notice.title }}</span>
-            <span class="notice-time">{{ notice.createTime }}</span>
-          </div>
-          <p class="notice-content">{{ notice.content }}</p>
-        </el-card>
-      </section>
     </div>
 
     <Footer />
@@ -91,22 +93,40 @@ const categories = ref<Category[]>([])
 const notices = ref<Notice[]>([])
 const loading = ref(true)
 
-onMounted(async () => {
+onMounted(() => {
+  loadGoods()
+  loadCategories()
+  loadNotices()
+})
+
+async function loadGoods() {
   try {
-    const [goodsRes, catRes, noticeRes] = await Promise.all([
-      goodsAPI.getList({ page: 1, pageSize: 8 }),
-      categoryAPI.getList(),
-      noticeAPI.getList()
-    ])
-    if (goodsRes.data) goodsList.value = goodsRes.data.records || []
-    if (catRes.data) categories.value = catRes.data
-    if (noticeRes.data) notices.value = noticeRes.data
+    const res = await goodsAPI.getList({ page: 1, pageSize: 8 })
+    if (res.data) goodsList.value = res.data.records || []
   } catch (e) {
-    console.error('加载首页数据失败', e)
+    console.error('加载商品失败', e)
   } finally {
     loading.value = false
   }
-})
+}
+
+async function loadCategories() {
+  try {
+    const res = await categoryAPI.getList()
+    if (res.data) categories.value = res.data
+  } catch (e) {
+    console.error('加载分类失败', e)
+  }
+}
+
+async function loadNotices() {
+  try {
+    const res = await noticeAPI.getList()
+    notices.value = res.data || []
+  } catch (e) {
+    console.error('加载公告失败', e)
+  }
+}
 
 function goToCategory(id: number) {
   router.push({ path: '/goods', query: { categoryId: id.toString() } })
@@ -168,36 +188,77 @@ function getCategoryColor(_id: number): string {
   align-items: center;
   gap: 12px;
   font-size: 14px;
-  transition: transform 0.2s;
+  transition: box-shadow 0.2s ease;
 }
 
 .category-card:hover {
-  transform: translateY(-3px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
-.notice-card {
-  margin-bottom: 12px;
+.notice-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background: #fdf6ec;
+  border: 1px solid #faecd8;
+  border-left: 4px solid #e6a23c;
+  border-radius: 8px;
 }
 
-.notice-header {
+.notice-bar-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.notice-title {
+  gap: 6px;
+  flex: 0 0 auto;
   font-weight: 600;
+  color: #b88230;
+  white-space: nowrap;
+  line-height: 24px;
+}
+
+.notice-bar-icon {
+  color: #e6a23c;
+}
+
+.notice-bar-list {
   flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.notice-time {
-  color: #909399;
-  font-size: 12px;
+.notice-bar-item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 24px;
 }
 
-.notice-content {
+.notice-bar-item-title {
+  flex: 0 0 auto;
+  font-weight: 600;
+  color: #303133;
+}
+
+.notice-bar-item-content {
+  flex: 1;
   color: #606266;
-  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.notice-bar-item-time {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: #909399;
 }
 </style>

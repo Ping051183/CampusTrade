@@ -178,19 +178,26 @@ onMounted(async () => {
 async function loadGoods() {
   loading.value = true
   try {
-    const [goodsRes, commentRes] = await Promise.all([
-      goodsAPI.getDetail(goodsId.value),
-      commentAPI.getList(goodsId.value)
-    ])
+    const goodsRes = await goodsAPI.getDetail(goodsId.value)
     if (goodsRes.data) {
       goods.value = goodsRes.data
       loadSellerCredit(goodsRes.data.sellerId)
     }
-    if (commentRes.data) comments.value = commentRes.data
   } catch (e) {
     console.error('加载商品详情失败', e)
   } finally {
     loading.value = false
+  }
+  loadComments()
+}
+
+/** 评论加载与详情解耦：失败不影响商品信息展示 */
+async function loadComments() {
+  try {
+    const commentRes = await commentAPI.getList(goodsId.value)
+    if (commentRes.data) comments.value = commentRes.data
+  } catch (e) {
+    // 评论加载失败静默
   }
 }
 

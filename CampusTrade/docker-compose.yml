@@ -1,10 +1,8 @@
-# ===== Docker Compose编排配置 =====
+# ===== Docker Compose 编排配置 =====
 # 一键部署校园二手交易平台
 
-version: '3.8'
-
 services:
-  # MySQL数据库
+  # MySQL 数据库
   mysql:
     image: mysql:8.0
     container_name: campus-mysql
@@ -18,17 +16,33 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/seed.sql
     networks:
       - campus-network
 
-  # Redis缓存
+  # Redis 缓存（宿主 6380，避免与本机其它 Redis 冲突）
   redis:
     image: redis:7-alpine
     container_name: campus-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis-data:/data
+    networks:
+      - campus-network
+
+  # RabbitMQ：订单超时延迟取消（TTL + 死信队列）
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: campus-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - campus-network
 
@@ -41,15 +55,18 @@ services:
     ports:
       - "8080:8080"
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_trade?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/campus_trade?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
     volumes:
       - upload-data:/var/upload/campus-trade
     depends_on:
       - mysql
       - redis
+      - rabbitmq
     networks:
       - campus-network
 
@@ -73,4 +90,5 @@ networks:
 volumes:
   mysql-data:
   redis-data:
+  rabbitmq-data:
   upload-data:

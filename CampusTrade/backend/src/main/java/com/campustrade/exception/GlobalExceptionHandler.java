@@ -2,6 +2,7 @@ package com.campustrade.exception;
 
 import com.campustrade.common.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -60,6 +61,23 @@ public class GlobalExceptionHandler {
     public Result<Void> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("参数异常: {}", e.getMessage());
         return Result.error(400, e.getMessage());
+    }
+
+    /**
+     * 处理数据库约束异常（如字段超长、唯一键冲突），避免直接返回 500
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @ResponseStatus(HttpStatus.OK)
+    public Result<Void> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String detail = e.getMostSpecificCause() != null ? e.getMostSpecificCause().getMessage() : e.getMessage();
+        log.warn("数据约束异常: {}", detail);
+        if (detail != null && detail.contains("Data too long")) {
+            return Result.error(400, "提交的内容过长，请检查昵称、手机号、邮箱等字段");
+        }
+        if (detail != null && detail.contains("Duplicate entry")) {
+            return Result.error(400, "提交的信息已存在，请勿重复提交");
+        }
+        return Result.error(400, "提交的数据不符合要求，请检查后重试");
     }
 
     /**

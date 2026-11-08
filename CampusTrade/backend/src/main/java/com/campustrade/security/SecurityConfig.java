@@ -27,6 +27,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RestAuthenticationEntryPoint restAuthenticationEntryPoint;
+    private final RestAccessDeniedHandler restAccessDeniedHandler;
 
     /** 白名单URL - 无需认证即可访问 */
     private static final String[] WHITE_LIST = {
@@ -35,6 +37,7 @@ public class SecurityConfig {
             "/api/goods/list",
             "/api/goods/detail/**",
             "/api/goods/search",
+            "/api/comment/list/**",
             "/api/notice/list",
             "/api/chat/unread/count",
             "/api/review/user/**",
@@ -45,7 +48,9 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/swagger-resources/**",
             "/webjars/**",
-            "/uploads/**"
+            "/uploads/**",
+            "/actuator/health",
+            "/actuator/info"
     };
 
     @Bean
@@ -67,7 +72,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 // 添加JWT过滤器
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // 异常处理：未认证 401（JSON）、无权限 403（JSON）
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(restAuthenticationEntryPoint)
+                        .accessDeniedHandler(restAccessDeniedHandler));
 
         return http.build();
     }

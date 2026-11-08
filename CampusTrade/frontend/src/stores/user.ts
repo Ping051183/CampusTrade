@@ -21,6 +21,21 @@ export const useUserStore = defineStore('user', () => {
   const displayName = computed(() => nickname.value || username.value)
 
   /**
+   * 解析 JWT 的过期时间（毫秒），解析失败返回 null
+   */
+  function parseTokenExp(token: string): number | null {
+    try {
+      const payload = token.split('.')[1]
+      if (!payload) return null
+      const normalized = payload.replace(/-/g, '+').replace(/_/g, '/')
+      const json = JSON.parse(atob(normalized))
+      return typeof json.exp === 'number' ? json.exp * 1000 : null
+    } catch (e) {
+      return null
+    }
+  }
+
+  /**
    * 从本地存储恢复登录状态
    */
   function initFromStorage() {
@@ -28,6 +43,12 @@ export const useUserStore = defineStore('user', () => {
     if (saved) {
       try {
         const data = JSON.parse(saved)
+        // 没有 token 或 token 已过期：视为未登录，避免用无效凭证反复请求
+        const exp = data.token ? parseTokenExp(data.token) : null
+        if (!data.token || (exp !== null && exp <= Date.now())) {
+          clearUser()
+          return
+        }
         token.value = data.token
         userId.value = data.userId
         username.value = data.username

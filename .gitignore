@@ -33,3 +33,8 @@ CampusTrade-release/
 # ===== 系统文件 =====
 .DS_Store
 Thumbs.db
+
+# ===== 个人文档与简历（保留在本地，不随仓库发布） =====
+CampusTrade/docs/
+CampusTrade/简历-*
+CampusTrade/scripts/build_resume_docx.py

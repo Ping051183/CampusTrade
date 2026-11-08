@@ -81,12 +81,15 @@ body {
 
 /* ===== 按钮动画 ===== */
 
+/* 只过渡颜色类属性，避免尺寸/布局参与动画导致点击时抖动；
+   不使用 :active 缩放，防止按下瞬间产生"元素跳动"的错觉 */
 .el-button {
-  transition: all 0.25s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .el-button:active {
-  transform: scale(0.97);
+  transform: none;
 }
 
 /* ===== 图片容器 ===== */

@@ -21,6 +21,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -48,6 +51,12 @@ class OrderServiceImplTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private com.campustrade.service.WalletService walletService;
+
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
 
@@ -60,7 +69,8 @@ class OrderServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        orderService = new OrderServiceImpl(orderMapper, goodsMapper, cacheService, notificationService);
+        orderService = new OrderServiceImpl(orderMapper, goodsMapper, cacheService, notificationService,
+                walletService, eventPublisher);
     }
 
     /** 构造一个在售商品 */
@@ -502,6 +512,72 @@ class OrderServiceImplTest {
             BusinessException ex = assertThrows(BusinessException.class,
                     () -> orderService.getOrderDetail(ORDER_ID, BUYER_ID));
             assertEquals(ErrorCode.ORDER_NOT_FOUND.getCode(), ex.getCode());
+        }
+    }
+
+    @Nested
+    @DisplayName("超时未支付自动取消")
+    class TimeoutCancelTests {
+
+        @Test
+        @DisplayName("扫描时按「当前时间 - 超时分钟」计算截止时间并透传批量上限")
+        void findTimeoutIds_delegates() {
+            when(orderMapper.selectTimeoutUnpaidIds(any(LocalDateTime.class), eq(50)))
+                    .thenReturn(List.of(ORDER_ID));
+
+            List<Long> ids = orderService.findTimeoutUnpaidOrderIds(30, 50);
+
+            assertEquals(List.of(ORDER_ID), ids);
+            ArgumentCaptor<LocalDateTime> deadlineCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+            verify(orderMapper).selectTimeoutUnpaidIds(deadlineCaptor.capture(), eq(50));
+            long diffSeconds = Math.abs(Duration.between(
+                    deadlineCaptor.getValue(), LocalDateTime.now().minusMinutes(30)).toSeconds());
+            assertTrue(diffSeconds < 5, "截止时间应约等于当前时间减 30 分钟，实际偏差 " + diffSeconds + " 秒");
+        }
+
+        @Test
+        @DisplayName("Mapper 返回 null 时安全返回空集合")
+        void findTimeoutIds_nullSafe() {
+            when(orderMapper.selectTimeoutUnpaidIds(any(LocalDateTime.class), anyInt())).thenReturn(null);
+
+            assertTrue(orderService.findTimeoutUnpaidOrderIds(30, 100).isEmpty());
+        }
+
+        @Test
+        @DisplayName("取消成功：CAS 0->4、商品恢复在售、清缓存并通知买卖双方")
+        void cancelByTimeout_success() {
+            when(orderMapper.selectById(ORDER_ID)).thenReturn(pendingOrder());
+            when(orderMapper.updateStatus(ORDER_ID, StatusConstant.ORDER_PENDING_PAYMENT,
+                    StatusConstant.ORDER_CANCELLED)).thenReturn(1);
+
+            assertTrue(orderService.cancelByTimeout(ORDER_ID, 30));
+
+            verify(goodsMapper).restoreOnSale(GOODS_ID);
+            verify(cacheService).evict(CacheKeys.GOODS_DETAIL + GOODS_ID);
+            verify(notificationService).send(eq(BUYER_ID), eq("ORDER_TIMEOUT_CANCELLED"),
+                    anyString(), anyString(), eq(ORDER_ID));
+            verify(notificationService).send(eq(SELLER_ID), eq("ORDER_TIMEOUT_CANCELLED"),
+                    anyString(), anyString(), eq(ORDER_ID));
+        }
+
+        @Test
+        @DisplayName("订单已被支付时 CAS 影响 0 行：不取消、不动商品、不发通知")
+        void cancelByTimeout_alreadyPaid() {
+            when(orderMapper.selectById(ORDER_ID)).thenReturn(pendingOrder());
+            when(orderMapper.updateStatus(anyLong(), anyInt(), anyInt())).thenReturn(0);
+
+            assertFalse(orderService.cancelByTimeout(ORDER_ID, 30));
+
+            verify(goodsMapper, never()).restoreOnSale(anyLong());
+            verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), any());
+        }
+
+        @Test
+        @DisplayName("订单不存在时返回 false")
+        void cancelByTimeout_notFound() {
+            when(orderMapper.selectById(ORDER_ID)).thenReturn(null);
+
+            assertFalse(orderService.cancelByTimeout(ORDER_ID, 30));
         }
     }
 }

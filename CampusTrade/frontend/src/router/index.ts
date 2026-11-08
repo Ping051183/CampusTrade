@@ -3,6 +3,11 @@ import { useUserStore } from '@/stores/user'
 
 const router = createRouter({
   history: createWebHistory(),
+  // 页面切换后回到顶部；浏览器后退时恢复原位置
+  scrollBehavior(_to, _from, savedPosition) {
+    if (savedPosition) return savedPosition
+    return { top: 0 }
+  },
   routes: [
     // 首页
     {

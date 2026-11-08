@@ -185,7 +185,7 @@ function handleCommand(command: string) {
   text-decoration: none;
   border-radius: 6px;
   font-size: 14px;
-  transition: all 0.2s;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-link:hover,

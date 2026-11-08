@@ -169,4 +169,9 @@ async function handleDelete(id: number) {
 .goods-title-link:hover {
   text-decoration: underline;
 }
+
+/* 表格区域保持最小高度，避免切换标签时表格高度突变导致页面跳动 */
+.my-goods-page :deep(.el-table) {
+  min-height: 320px;
+}
 </style>

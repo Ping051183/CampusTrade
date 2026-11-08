@@ -46,11 +46,12 @@
         WHERE DATE(create_time) = CURDATE()
     </select>
 
-    <!-- 统计今日交易额 -->
+    <!-- 统计今日交易额：已付款及之后的状态（1已付款/2已发货/3已收货/5已完成），排除已退款订单 -->
     <select id="sumTodayAmount" resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(amount), 0) FROM orders
         WHERE DATE(create_time) = CURDATE()
-        AND status IN (3, 5)
+        AND status IN (1, 2, 3, 5)
+        AND (refund_status IS NULL OR refund_status &lt;&gt; 2)
     </select>
 
     <!-- 统计总订单数 -->
@@ -58,10 +59,11 @@
         SELECT COUNT(*) FROM orders
     </select>
 
-    <!-- 统计总交易额 -->
+    <!-- 统计总交易额：已付款及之后的状态，排除已退款订单 -->
     <select id="sumTotalAmount" resultType="java.math.BigDecimal">
         SELECT COALESCE(SUM(amount), 0) FROM orders
-        WHERE status IN (3, 5)
+        WHERE status IN (1, 2, 3, 5)
+        AND (refund_status IS NULL OR refund_status &lt;&gt; 2)
     </select>
 
     <!-- 条件更新订单状态（CAS），并发重复支付/发货/确认时只有一次能成功 -->
@@ -105,4 +107,12 @@
         SET seller_rated = 1, update_time = NOW()
         WHERE id = #{id} AND seller_rated = 0 AND status IN (3, 5)
     </update>
+
+    <!-- 查询超时未支付的订单ID：定时任务扫描用，避免全表加载 -->
+    <select id="selectTimeoutUnpaidIds" resultType="java.lang.Long">
+        SELECT id FROM orders
+        WHERE status = 0 AND create_time &lt; #{deadline}
+        ORDER BY id
+        LIMIT #{limit}
+    </select>
 </mapper>

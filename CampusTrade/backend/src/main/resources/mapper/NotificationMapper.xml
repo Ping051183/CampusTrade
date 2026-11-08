@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.campustrade.mapper.NotificationMapper">
+
+    <!-- 标记单条已读：user_id 条件防止越权 -->
+    <update id="markRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <!-- 标记当前用户全部已读 -->
+    <update id="markAllRead">
+        UPDATE notification
+        SET is_read = 1
+        WHERE user_id = #{userId} AND is_read = 0
+    </update>
+</mapper>

@@ -19,7 +19,7 @@
         <el-icon class="stat-icon" :size="40" color="#e6a23c"><Clock /></el-icon>
       </el-card>
       <el-card class="stat-card" shadow="hover">
-        <div class="stat-value">¥{{ stats.amountTotal || 0 }}</div>
+        <div class="stat-value">¥{{ formatAmount(stats.amountTotal) }}</div>
         <div class="stat-label">总交易额</div>
         <el-icon class="stat-icon" :size="40" color="#f56c6c"><Money /></el-icon>
       </el-card>
@@ -35,7 +35,7 @@
           </div>
           <div class="detail-row">
             <span>今日交易额</span>
-            <span class="detail-value">¥{{ stats.amountToday || 0 }}</span>
+            <span class="detail-value">¥{{ formatAmount(stats.amountToday) }}</span>
           </div>
           <div class="detail-row">
             <span>总订单数</span>
@@ -73,6 +73,12 @@ interface DashboardStats {
 }
 
 const stats = ref<DashboardStats>({})
+
+/** 金额统一显示两位小数，避免 631 与 631.00 混用 */
+function formatAmount(value?: number | string | null) {
+  const num = Number(value ?? 0)
+  return num.toFixed(2)
+}
 
 onMounted(async () => {
   try {

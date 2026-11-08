@@ -56,7 +56,10 @@ request.interceptors.response.use(
           window.location.href = '/login'
           break
         case 403:
-          ElMessage.error('权限不足')
+          // 游客浏览公开页面时触发的受保护接口静默失败，避免骚扰；已登录用户才提示
+          if (localStorage.getItem('userInfo')) {
+            ElMessage.error('权限不足')
+          }
           break
         case 500:
           ElMessage.error('服务器错误')

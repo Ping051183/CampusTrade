@@ -7,18 +7,23 @@ import com.campustrade.cache.CacheService;
 import com.campustrade.constant.StatusConstant;
 import com.campustrade.entity.Goods;
 import com.campustrade.entity.Order;
+import com.campustrade.event.OrderCreatedEvent;
 import com.campustrade.exception.BusinessException;
 import com.campustrade.exception.ErrorCode;
 import com.campustrade.mapper.GoodsMapper;
 import com.campustrade.mapper.OrderMapper;
 import com.campustrade.service.NotificationService;
 import com.campustrade.service.OrderService;
+import com.campustrade.service.WalletService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -39,6 +44,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final GoodsMapper goodsMapper;
     private final CacheService cacheService;
     private final NotificationService notificationService;
+    private final WalletService walletService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /** 订单号生成计数器 */
     private static final AtomicLong ORDER_COUNTER = new AtomicLong(0);
@@ -86,6 +93,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         notificationService.send(goods.getSellerId(), "ORDER_CREATED", "您有一笔新订单",
                 "商品「" + goods.getTitle() + "」被买家下单，金额 ¥" + goods.getPrice() + "，请等待买家付款",
                 order.getId());
+
+        // 事务提交后投递延迟消息（@TransactionalEventListener AFTER_COMMIT），
+        // 回滚的订单不会产生消息；MQ 不可用时由 OrderTimeoutTask 兜底
+        eventPublisher.publishEvent(new OrderCreatedEvent(order.getId(), LocalDateTime.now()));
 
         return order;
     }
@@ -140,6 +151,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
 
+        // 担保交易：先冻结买家余额（可用 -> 冻结），余额不足直接失败。
+        // 冻结与订单状态变更在同一事务内，后面的 CAS 失败会一起回滚
+        walletService.freezeForPayment(order);
+
         // 模拟支付：0 待付款 -> 1 已付款，CAS 保证重复点击只会成功一次
         int rows = orderMapper.updateStatus(orderId,
                 StatusConstant.ORDER_PENDING_PAYMENT, StatusConstant.ORDER_PAID);
@@ -148,7 +163,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         notificationService.send(order.getSellerId(), "ORDER_PAID", "买家已付款",
-                "订单 " + order.getOrderNo() + " 已支付 ¥" + order.getAmount() + "，请尽快发货", orderId);
+                "订单 " + order.getOrderNo() + " 已支付 ¥" + order.getAmount()
+                        + "（资金由平台托管，确认收货后结算给卖家）", orderId);
     }
 
     @Override
@@ -203,6 +219,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ErrorCode.ORDER_CANNOT_CONFIRM);
         }
 
+        // 确认收货即放款：买家冻结资金结算给卖家（幂等，重复确认不会重复打款）
+        walletService.settle(order);
+
         notificationService.send(order.getSellerId(), "ORDER_RECEIVED", "买家已确认收货",
                 "订单 " + order.getOrderNo() + " 交易完成，可以互相评价了", orderId);
     }
@@ -248,8 +267,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         goodsMapper.restoreOnSale(order.getGoodsId());
         cacheService.evict(CacheKeys.GOODS_DETAIL + order.getGoodsId());
 
+        // 资金原路退回：买家冻结余额解冻为可用余额
+        walletService.refund(order);
+
         notificationService.send(order.getBuyerId(), "REFUND_AGREED", "退款已完成",
-                "订单 " + order.getOrderNo() + " 的退款申请已通过，¥" + order.getAmount() + " 将原路退回（模拟）", orderId);
+                "订单 " + order.getOrderNo() + " 的退款申请已通过，¥" + order.getAmount() + " 已退回您的账户余额", orderId);
     }
 
     @Override
@@ -277,6 +299,39 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         LambdaQueryWrapper<Order> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Order::getOrderNo, orderNo);
         return orderMapper.selectOne(wrapper);
+    }
+
+    @Override
+    public List<Long> findTimeoutUnpaidOrderIds(int timeoutMinutes, int limit) {
+        // 只查 id，避免把整行数据加载进内存；联合索引 (status, create_time) 支撑该查询
+        LocalDateTime deadline = LocalDateTime.now().minusMinutes(Math.max(timeoutMinutes, 1));
+        List<Long> ids = orderMapper.selectTimeoutUnpaidIds(deadline, Math.max(limit, 1));
+        return ids == null ? Collections.emptyList() : ids;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean cancelByTimeout(Long orderId, int timeoutMinutes) {
+        Order order = orderMapper.selectById(orderId);
+        if (order == null) {
+            return false;
+        }
+
+        // CAS 0 -> 4：与买家支付并发时只有一方能成功，避免把刚付款的订单取消掉
+        int rows = orderMapper.updateStatus(orderId,
+                StatusConstant.ORDER_PENDING_PAYMENT, StatusConstant.ORDER_CANCELLED);
+        if (rows == 0) {
+            return false;
+        }
+
+        // 释放商品：恢复在售并清掉详情缓存
+        goodsMapper.restoreOnSale(order.getGoodsId());
+        cacheService.evict(CacheKeys.GOODS_DETAIL + order.getGoodsId());
+
+        String content = "订单 " + order.getOrderNo() + " 超过 " + timeoutMinutes + " 分钟未支付，已自动取消，商品重新上架";
+        notificationService.send(order.getBuyerId(), "ORDER_TIMEOUT_CANCELLED", "订单超时已取消", content, orderId);
+        notificationService.send(order.getSellerId(), "ORDER_TIMEOUT_CANCELLED", "订单超时已取消", content, orderId);
+        return true;
     }
 
     /**

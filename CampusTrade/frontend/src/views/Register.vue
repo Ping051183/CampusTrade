@@ -17,13 +17,13 @@
             <el-input v-model="form.confirmPassword" type="password" placeholder="再次输入密码" show-password />
           </el-form-item>
           <el-form-item label="昵称" prop="nickname">
-            <el-input v-model="form.nickname" placeholder="选填" />
+            <el-input v-model="form.nickname" placeholder="选填，最多50个字符" maxlength="50" />
           </el-form-item>
           <el-form-item label="手机号" prop="phone">
-            <el-input v-model="form.phone" placeholder="选填" />
+            <el-input v-model="form.phone" placeholder="选填，11位手机号" maxlength="11" />
           </el-form-item>
           <el-form-item label="邮箱" prop="email">
-            <el-input v-model="form.email" placeholder="选填" />
+            <el-input v-model="form.email" placeholder="选填，如 name@example.com" maxlength="100" />
           </el-form-item>
           <el-form-item label="学号" prop="studentNo">
             <el-input v-model="form.studentNo" placeholder="如 202310610320（12位）" maxlength="12" />
@@ -103,6 +103,30 @@ const validatePass = (_rule: any, value: string, callback: any) => {
   }
 }
 
+/** 手机号：选填，填写时必须为 11 位、以 1 开头 */
+const PHONE_REGEX = /^1[3-9]\d{9}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const validatePhone = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback()
+  } else if (!PHONE_REGEX.test(value)) {
+    callback(new Error('手机号格式不正确，应为11位数字且以1开头'))
+  } else {
+    callback()
+  }
+}
+
+const validateEmail = (_rule: any, value: string, callback: any) => {
+  if (!value) {
+    callback()
+  } else if (!EMAIL_REGEX.test(value)) {
+    callback(new Error('邮箱格式不正确'))
+  } else {
+    callback()
+  }
+}
+
 const rules: FormRules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
@@ -119,6 +143,12 @@ const rules: FormRules = {
   studentNo: [
     { required: true, message: '请输入学号', trigger: 'blur' },
     { validator: validateStudentNo, trigger: 'blur' }
+  ],
+  phone: [
+    { validator: validatePhone, trigger: 'blur' }
+  ],
+  email: [
+    { validator: validateEmail, trigger: 'blur' }
   ],
   school: [
     { required: true, message: '学校不能为空', trigger: 'change' }
@@ -146,7 +176,7 @@ async function handleRegister() {
       router.push('/login')
     }
   } catch (e) {
-    // Error handled in interceptor
+    // 错误提示由 request.ts 响应拦截器统一弹出（后端 400 + message 会原样展示）
   } finally {
     submitting.value = false
   }

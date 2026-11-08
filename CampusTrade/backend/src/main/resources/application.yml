@@ -8,7 +8,7 @@ spring:
   # 数据源配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/campus_trade?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false
+    url: jdbc:mysql://localhost:3306/campus_trade?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
     password: 123456
 
@@ -39,6 +39,21 @@ spring:
       max-file-size: 10MB
       max-request-size: 20MB
 
+  # RabbitMQ配置
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: guest
+    password: guest
+    # 本地没起 RabbitMQ 时快速失败，投递异常被 Publisher 捕获后走定时任务兜底
+    connection-timeout: 2000ms
+    listener:
+      simple:
+        acknowledge-mode: auto
+        prefetch: 10
+        # 监听器抛异常不重回队列，避免毒消息无限重投
+        default-requeue-rejected: false
+
 # MyBatis Plus配置
 mybatis-plus:
   configuration:
@@ -65,8 +80,37 @@ file:
     path: ${user.home}/campus-trade/uploads
     max-size: 10485760  # 10MB
 
+# 业务参数
+campustrade:
+  order:
+    # 待付款订单超时时间（分钟）：MQ 延迟消息到期后取消，定时任务兜底
+    timeout-minutes: 30
+    # 是否启用 MQ 延迟取消；关闭后退回纯定时任务模式
+    mq-enabled: true
+    # 是否保留定时扫描兜底（MQ 投递失败、消息丢失、提前到达时生效）
+    scan-enabled: true
+    # 定时扫描间隔（毫秒），默认 5 分钟
+    scan-interval-ms: 300000
+    # 应用启动后延迟多久开始首次扫描（毫秒），避免启动期与初始化抢数据库
+    initial-delay-ms: 60000
+    # 单批最多处理订单数
+    scan-batch-size: 100
+  # 慢 SQL 告警阈值（毫秒）：执行耗时超过该值的 SQL 打 WARN 日志
+  slow-sql:
+    threshold-ms: 500
+
 # 日志配置
 logging:
   level:
     com.campustrade: debug
     org.springframework.security: info
+
+# Actuator：健康检查与运行指标
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

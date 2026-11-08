@@ -90,11 +90,8 @@ function goToDetail() {
   cursor: pointer;
   border-radius: 8px;
   overflow: hidden;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.goods-card:hover {
-  transform: translateY(-4px);
+  /* 只过渡阴影：hover 不做位移，避免卡片在鼠标停留时持续"上浮" */
+  transition: box-shadow 0.2s ease;
 }
 
 .goods-image {

@@ -1,5 +1,6 @@
 package com.campustrade.controller;
 
+import com.campustrade.annotation.RateLimit;
 import com.campustrade.common.Result;
 import com.campustrade.dto.LoginDTO;
 import com.campustrade.dto.RegisterDTO;
@@ -26,6 +27,7 @@ public class AuthController {
     /**
      * 用户注册
      */
+    @RateLimit(limit = 5, windowSeconds = 60, key = "register")
     @PostMapping("/register")
     @Operation(summary = "用户注册")
     public Result<Void> register(@Valid @RequestBody RegisterDTO registerDTO) {
@@ -36,6 +38,7 @@ public class AuthController {
     /**
      * 用户登录
      */
+    @RateLimit(limit = 10, windowSeconds = 60, key = "login")
     @PostMapping("/login")
     @Operation(summary = "用户登录")
     public Result<LoginVO> login(@Valid @RequestBody LoginDTO loginDTO) {

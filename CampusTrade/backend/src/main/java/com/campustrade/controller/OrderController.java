@@ -1,6 +1,8 @@
 package com.campustrade.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.campustrade.annotation.Idempotent;
+import com.campustrade.annotation.RateLimit;
 import com.campustrade.common.PageResult;
 import com.campustrade.common.Result;
 import com.campustrade.entity.Order;
@@ -27,6 +29,8 @@ public class OrderController {
     /**
      * 创建订单（购买商品）
      */
+    @Idempotent(ttlSeconds = 60)
+    @RateLimit(limit = 20, windowSeconds = 60, key = "order-create")
     @PostMapping("/create/{goodsId}")
     @Operation(summary = "创建订单")
     public Result<Order> createOrder(@PathVariable Long goodsId,

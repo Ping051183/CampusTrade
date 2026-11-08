@@ -45,6 +45,7 @@
               <el-button v-if="order.status === 0" size="small" type="danger" @click="handleCancel(order.id)">
                 取消订单
               </el-button>
+              <span v-if="order.status === 0" class="order-tip">30 分钟内未支付将自动取消</span>
               <span v-if="order.status === 1 && order.refundStatus === 0" class="order-tip">等待卖家发货</span>
               <el-button v-if="order.status === 2" size="small" type="primary" @click="handleConfirm(order.id)">
                 确认收货
@@ -459,5 +460,11 @@ async function handleReview() {
   margin-bottom: 8px;
   font-size: 14px;
   color: #606266;
+}
+
+/* 列表区域保持最小高度，避免切换标签或加载完成时页面高度突变导致跳动 */
+.order-list,
+.empty-state {
+  min-height: 360px;
 }
 </style>

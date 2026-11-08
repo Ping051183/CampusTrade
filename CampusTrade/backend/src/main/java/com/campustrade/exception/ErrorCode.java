@@ -61,6 +61,11 @@ public enum ErrorCode {
     FILE_TOO_LARGE(8001, "文件大小超出限制"),
     FILE_TYPE_ERROR(8002, "文件类型不支持"),
     FILE_UPLOAD_ERROR(8003, "文件上传失败"),
+    RATE_LIMIT_EXCEEDED(8004, "请求过于频繁，请稍后再试"),
+    IDEMPOTENT_CONFLICT(8005, "请求正在处理中，请勿重复提交"),
+    IDEMPOTENT_KEY_REQUIRED(8006, "缺少幂等键 Idempotency-Key"),
+    WALLET_AMOUNT_INVALID(8007, "金额不合法"),
+    INSUFFICIENT_BALANCE(8008, "余额不足，请先充值"),
 
     // 聊天模块
     CHAT_SEND_TO_SELF(9001, "不能给自己发送消息");

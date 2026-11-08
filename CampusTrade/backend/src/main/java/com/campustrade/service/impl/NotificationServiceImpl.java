@@ -51,19 +51,11 @@ public class NotificationServiceImpl extends ServiceImpl<NotificationMapper, Not
 
     @Override
     public void markRead(Long id, Long userId) {
-        lambdaUpdate()
-                .eq(Notification::getId, id)
-                .eq(Notification::getUserId, userId)
-                .set(Notification::getIsRead, 1)
-                .update();
+        notificationMapper.markRead(id, userId);
     }
 
     @Override
     public void markAllRead(Long userId) {
-        lambdaUpdate()
-                .eq(Notification::getUserId, userId)
-                .eq(Notification::getIsRead, 0)
-                .set(Notification::getIsRead, 1)
-                .update();
+        notificationMapper.markAllRead(userId);
     }
 }

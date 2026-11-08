@@ -24,6 +24,7 @@
         <knife4j.version>4.4.0</knife4j.version>
         <hutool.version>5.8.25</hutool.version>
         <lombok.version>1.18.38</lombok.version>
+        <jacoco.version>0.8.12</jacoco.version>
     </properties>
 
     <dependencies>
@@ -47,6 +48,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+        <!-- 健康检查与运行指标（/actuator/health、/actuator/metrics） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <!-- RabbitMQ：下单后投递延迟消息，到点自动取消超时订单 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
         </dependency>
 
         <!-- MyBatis Plus -->
@@ -152,6 +163,38 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <!-- 测试覆盖率：mvn test 后报告生成在 target/site/jacoco/index.html -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>com/campustrade/entity/**</exclude>
+                        <exclude>com/campustrade/dto/**</exclude>
+                        <exclude>com/campustrade/vo/**</exclude>
+                        <exclude>com/campustrade/config/**</exclude>
+                        <exclude>com/campustrade/common/**</exclude>
+                        <exclude>com/campustrade/mapper/**</exclude>
+                        <exclude>com/campustrade/CampusTradeApplication.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

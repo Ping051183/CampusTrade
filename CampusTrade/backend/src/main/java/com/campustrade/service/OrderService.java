@@ -3,6 +3,8 @@ package com.campustrade.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.campustrade.entity.Order;
 
+import java.util.List;
+
 /**
  * 订单Service接口
  */
@@ -57,4 +59,19 @@ public interface OrderService extends IService<Order> {
      * 根据订单编号查询订单
      */
     Order getByOrderNo(String orderNo);
+
+    /**
+     * 查询超时未支付的订单ID（待付款且创建时间早于 timeoutMinutes 分钟前）
+     *
+     * @param timeoutMinutes 超时时间（分钟）
+     * @param limit          单批最大数量
+     */
+    List<Long> findTimeoutUnpaidOrderIds(int timeoutMinutes, int limit);
+
+    /**
+     * 取消单个超时未支付订单（独立事务，CAS 0 -> 4，商品恢复在售并通知双方）
+     *
+     * @return true 表示本次确实取消成功，false 表示订单已被支付/取消
+     */
+    boolean cancelByTimeout(Long orderId, int timeoutMinutes);
 }

@@ -162,13 +162,12 @@ function formatTime(timeStr: string): string {
   border-radius: 12px;
   margin-bottom: 12px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: box-shadow 0.2s ease;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
 .conversation-card:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
 }
 
 .avatar-badge :deep(.el-badge__content) {
